@@ -1,43 +1,53 @@
+import streamlit as st
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
-
 import os
 
-# 1. Load vector store
+# Load vector DB
+
+@st.cache_resource
 def load_db():
     embeddings = OpenAIEmbeddings()
-    db = FAISS.load_local("vectorstore", embeddings)
-    return db
+    return FAISS.load_local("vectorstore", embeddings)
 
-# 2. Create chatbot chain
-def create_qa_chain(db):
-    llm = ChatOpenAI(model="gpt-3.5-turbo")
+# Create RAG chain
+@st.cache_resource
+def create_chain(_db):
+    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
-    qa_chain = RetrievalQA.from_chain_type(
+    return RetrievalQA.from_chain_type(
         llm=llm,
-        retriever=db.as_retriever()
+        retriever=_db.as_retriever(),
+        return_source_documents=True
     )
 
-    return qa_chain
+# UI
+st.set_page_config(page_title="RAG Chatbot", page_icon="🤖")
 
-# 3. Chat loop
-if __name__ == "__main__":
-    if not os.path.exists("vectorstore"):
-        print("Lance d'abord ingest.py")
-        exit()
+st.title("RAG Chatbot")
+st.write("Ask questions about your PDF documents")
 
-    db = load_db()
-    qa = create_qa_chain(db)
+# Load system
+if not os.path.exists("vectorstore"):
+    st.error("Run ingest.py first to create vector database")
+    st.stop()
 
-    print("RAG Chatbot prêt ! (pose tes questions)")
+db = load_db()
+qa = create_chain(db)
 
-    while True:
-        query = input("\nToi: ")
+# Input
+query = st.text_input("Your question:")
 
-        if query.lower() in ["exit", "quit"]:
-            break
+if query:
+    with st.spinner("Thinking... "):
+        result = qa({"query": query})
 
-        result = qa.run(query)
-        print("\nIA:", result)
+    st.subheader("Answer")
+    st.write(result["result"])
+
+    st.subheader("Sources")
+
+    for doc in result["source_documents"]:
+        st.info(doc.page_content[:300])
