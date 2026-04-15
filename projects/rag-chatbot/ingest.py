@@ -29,7 +29,7 @@ if __name__ == "__main__":
     file_path = "data/sample.pdf"  
 
     if not os.path.exists(file_path):
-        print("❌ Ajoute un PDF dans data/sample.pdf")
+        print("Ajoute un PDF dans data/sample.pdf")
         exit()
 
     docs = load_pdf(file_path)
