@@ -1,41 +1,45 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 import os
 
-# 1. Load PDF
-def load_pdf(file_path):
-    loader = PyPDFLoader(file_path)
-    pages = loader.load()
-    return pages
+DATA_PATH = "data"
 
-# 2. Split text into chunks
-def split_documents(docs):
+def load_all_pdfs():
+    documents = []
+
+    if not os.path.exists(DATA_PATH):
+        print("No data folder found")
+        return documents
+
+    for file in os.listdir(DATA_PATH):
+        if file.endswith(".pdf"):
+            path = os.path.join(DATA_PATH, file)
+            loader = PyPDFLoader(path)
+            documents.extend(loader.load())
+
+    return documents
+
+def split_docs(docs):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100
     )
     return splitter.split_documents(docs)
 
-# 3. Create vector store
-def create_vectorstore(chunks):
-    embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(chunks, embeddings)
-    return vectorstore
-
-# 4. Main pipeline
 if __name__ == "__main__":
-    file_path = "data/sample.pdf"  
+    docs = load_all_pdfs()
 
-    if not os.path.exists(file_path):
-        print("Ajoute un PDF dans data/sample.pdf")
+    if not docs:
+        print("No PDFs found in data/")
         exit()
 
-    docs = load_pdf(file_path)
-    chunks = split_documents(docs)
-    db = create_vectorstore(chunks)
+    chunks = split_docs(docs)
+
+    embeddings = OpenAIEmbeddings()
+    db = FAISS.from_documents(chunks, embeddings)
 
     db.save_local("vectorstore")
 
-    print("Vector database created successfully")
+    print("Vector database created from all PDFs")
