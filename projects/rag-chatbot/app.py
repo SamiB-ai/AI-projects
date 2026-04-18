@@ -1,12 +1,14 @@
 import streamlit as st
 import os
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import RetrievalQA
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.llms import HuggingFacePipeline
+from langchain_classic.chains import RetrievalQA
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from langchain_core.language_models.llms import LLM
+from typing import Optional, List
 
 st.set_page_config(page_title="AI Document Intelligence")
-
 st.title("AI Document Intelligence")
 st.write("Upload PDFs and analyze them with AI")
 
@@ -19,33 +21,92 @@ uploaded_files = st.file_uploader(
 
 if uploaded_files:
     os.makedirs("data", exist_ok=True)
-
+    
+    # Vide d'abord le dossier data
+    for old_file in os.listdir("data"):
+        os.remove(f"data/{old_file}")
+        print(f"[UPLOAD] Deleted old file: {old_file}")
+    
     for file in uploaded_files:
-        with open(f"data/{file.name}", "wb") as f:
+        path = f"data/{file.name}"
+        with open(path, "wb") as f:
             f.write(file.getbuffer())
-
+        print(f"[UPLOAD] Saved: {path}")
+    
     st.success("Files uploaded successfully")
 
 # Rebuild vector database
 if st.button("Rebuild Knowledge Base"):
-    os.system("python ingest.py")
-    st.success("Vector database updated")
+    import shutil
+    # Supprime l'ancienne vectorstore
+    if os.path.exists("vectorstore"):
+        shutil.rmtree("vectorstore")
+        print("[INGEST] Old vectorstore deleted")
+    
+    print("[INGEST] Starting ingest.py...")
+    result = os.system("python ingest.py")
+    print(f"[INGEST] ingest.py exited with code: {result}")
+    
+    if result == 0:
+        st.success("Vector database updated")
+        st.cache_resource.clear()  # ← recharge le db en mémoire
+    else:
+        st.error("ingest.py failed! Check the terminal.")
 
 # Load DB
 @st.cache_resource
 def load_db():
-    embeddings = OpenAIEmbeddings()
-    return FAISS.load_local("vectorstore", embeddings)
+    print("[DB] Loading vectorstore...")
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    db = FAISS.load_local("vectorstore", embeddings, allow_dangerous_deserialization=True)
+    print(f"[DB] Vectorstore loaded OK")
+    return db
 
-# LLM
-llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+# Load LLM
+@st.cache_resource
+@st.cache_resource
+def load_llm():
+    print("[LLM] Loading flan-t5-large...")
+
+    model_name = "google/flan-t5-large"  
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+    print("[LLM] Model loaded OK")
+
+    class FlanT5LLM(LLM):
+        def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+            inputs = tokenizer(
+                prompt,
+                return_tensors="pt",
+                truncation=True,
+                max_length=1024  
+            )
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=500,
+                num_beams=4,
+                early_stopping=True,
+                no_repeat_ngram_size=3  # évite les répétitions
+            )
+            result = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            print(f"[LLM] Output: '{result}'")
+            return result
+
+        @property
+        def _llm_type(self) -> str:
+            return "flan-t5"
+
+    return FlanT5LLM()
 
 # Check DB existence
 if not os.path.exists("vectorstore"):
     st.warning("Upload PDFs and rebuild database first")
     st.stop()
 
+print("[APP] Loading db and llm...")
 db = load_db()
+llm = load_llm()
+print("[APP] db and llm ready")
 
 # Chat history
 if "history" not in st.session_state:
@@ -53,58 +114,64 @@ if "history" not in st.session_state:
 
 # Summary
 st.header("Document Summary")
-
 if st.button("Generate Summary"):
-    docs = db.similarity_search("summarize this document", k=5)
-    context = "\n".join([doc.page_content for doc in docs])
-
-    summary = llm.predict(f"Summarize this:\n{context}")
-    st.write(summary)
+    docs = db.similarity_search("summary", k=5)
+    context = "\n".join([doc.page_content for doc in docs])[:1500]
+    
+    prompt = f"What is this document about? Give a detailed summary:\n\n{context[:2000]}"
+    
+    result = llm.invoke(prompt)
+    
+    print(f"[SUMMARY] Result: '{result}'")
+    if result and result.strip():
+        st.write(result)
+    else:
+        st.warning("Empty response. Check terminal.")
 
 # Insights
-st.header("Key Insights")
-
 if st.button("Extract Insights"):
-    docs = db.similarity_search("main ideas", k=5)
-    context = "\n".join([doc.page_content for doc in docs])
+    docs = db.similarity_search("key points requirements", k=5)
+    context = "\n".join([doc.page_content for doc in docs])[:1500]
+    
+    prompt = f"List the main requirements and rules from this text:\n\n{context[:2000]}"
+    
+    result = llm.invoke(prompt)
 
-    insights = llm.predict(f"Give key insights:\n{context}")
-    st.write(insights)
+    print(f"[INSIGHTS] Result: '{result}'")
+    if result and result.strip():
+        st.write(result)
+    else:
+        st.warning("Empty response. Check terminal.")
 
 # Q&A
 st.header("Ask Questions")
-
 query = st.text_input("Ask something about your documents")
 
 if query:
+    print(f"[QA] Query: '{query}'")
     qa = RetrievalQA.from_chain_type(
         llm=llm,
         retriever=db.as_retriever(),
         return_source_documents=True
     )
-
-    result = qa({"query": query})
+    result = qa.invoke({"query": query})
+    print(f"[QA] Result: '{result['result']}'")
 
     st.subheader("Answer")
     st.write(result["result"])
-
     st.session_state.history.append((query, result["result"]))
 
     st.subheader("Sources")
-
     for doc in result["source_documents"]:
         st.markdown(
-            f"""
-            <div style="background-color:#f5f5f5; padding:10px; border-radius:5px;">
+            f"""<div style="background-color:#f5f5f5; padding:10px; border-radius:5px; color:black;">
             {doc.page_content[:300]}
-            </div>
-            """,
+            </div>""",
             unsafe_allow_html=True
         )
 
 # History
 st.subheader("Chat History")
-
 for q, r in st.session_state.history:
-    st.write(f"You: {q}")
-    st.write(f"AI: {r}")
+    st.write(f"**You:** {q}")
+    st.write(f"**AI:** {r}")
