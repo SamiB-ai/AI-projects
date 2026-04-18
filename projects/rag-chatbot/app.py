@@ -22,7 +22,6 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     os.makedirs("data", exist_ok=True)
     
-    # Vide d'abord le dossier data
     for old_file in os.listdir("data"):
         os.remove(f"data/{old_file}")
         print(f"[UPLOAD] Deleted old file: {old_file}")
@@ -49,7 +48,7 @@ if st.button("Rebuild Knowledge Base"):
     
     if result == 0:
         st.success("Vector database updated")
-        st.cache_resource.clear()  # ← recharge le db en mémoire
+        st.cache_resource.clear() 
     else:
         st.error("ingest.py failed! Check the terminal.")
 
@@ -64,39 +63,12 @@ def load_db():
 
 # Load LLM
 @st.cache_resource
-@st.cache_resource
 def load_llm():
-    print("[LLM] Loading flan-t5-large...")
-
-    model_name = "google/flan-t5-large"  
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    print("[LLM] Model loaded OK")
-
-    class FlanT5LLM(LLM):
-        def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-            inputs = tokenizer(
-                prompt,
-                return_tensors="pt",
-                truncation=True,
-                max_length=1024  
-            )
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=500,
-                num_beams=4,
-                early_stopping=True,
-                no_repeat_ngram_size=3  # évite les répétitions
-            )
-            result = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            print(f"[LLM] Output: '{result}'")
-            return result
-
-        @property
-        def _llm_type(self) -> str:
-            return "flan-t5"
-
-    return FlanT5LLM()
+    from langchain_ollama import OllamaLLM
+    print("[LLM] Loading Gemma via Ollama...")
+    llm = OllamaLLM(model="gemma3:12b")  
+    print("[LLM] Ready")
+    return llm
 
 # Check DB existence
 if not os.path.exists("vectorstore"):
