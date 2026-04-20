@@ -1,149 +1,232 @@
 import streamlit as st
 import os
+
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.llms import HuggingFacePipeline
 from langchain_classic.chains import RetrievalQA
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from langchain_core.language_models.llms import LLM
-from typing import Optional, List
 
-st.set_page_config(page_title="AI Document Intelligence")
-st.title("AI Document Intelligence")
-st.write("Upload PDFs and analyze them with AI")
-
-# Upload PDFs
-uploaded_files = st.file_uploader(
-    "Upload your PDFs",
-    type="pdf",
-    accept_multiple_files=True
+# ---------------- CONFIG ----------------
+st.set_page_config(
+    page_title="AI Document Intelligence",
+    layout="wide",
+    page_icon="🧠"
 )
 
-if uploaded_files:
-    os.makedirs("data", exist_ok=True)
-    
-    for old_file in os.listdir("data"):
-        os.remove(f"data/{old_file}")
-        print(f"[UPLOAD] Deleted old file: {old_file}")
-    
-    for file in uploaded_files:
-        path = f"data/{file.name}"
-        with open(path, "wb") as f:
-            f.write(file.getbuffer())
-        print(f"[UPLOAD] Saved: {path}")
-    
-    st.success("Files uploaded successfully")
+# ---------------- CSS ----------------
+st.markdown("""
+<style>
 
-# Rebuild vector database
-if st.button("Rebuild Knowledge Base"):
-    import shutil
-    # Supprime l'ancienne vectorstore
-    if os.path.exists("vectorstore"):
-        shutil.rmtree("vectorstore")
-        print("[INGEST] Old vectorstore deleted")
-    
-    print("[INGEST] Starting ingest.py...")
-    result = os.system("python ingest.py")
-    print(f"[INGEST] ingest.py exited with code: {result}")
-    
-    if result == 0:
-        st.success("Vector database updated")
-        st.cache_resource.clear() 
-    else:
-        st.error("ingest.py failed! Check the terminal.")
+/* 🌍 Global */
+.stApp {
+    background-color: #f7f9fc;
+}
 
-# Load DB
-@st.cache_resource
-def load_db():
-    print("[DB] Loading vectorstore...")
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    db = FAISS.load_local("vectorstore", embeddings, allow_dangerous_deserialization=True)
-    print(f"[DB] Vectorstore loaded OK")
-    return db
+/* 🧠 Text */
+html, body, [class*="css"] {
+    color: #1f2937 !important;
+}
 
-# Load LLM
-@st.cache_resource
-def load_llm():
-    from langchain_ollama import OllamaLLM
-    print("[LLM] Loading Gemma via Ollama...")
-    llm = OllamaLLM(model="gemma3:12b")  
-    print("[LLM] Ready")
-    return llm
+/* 📂 Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: white;
+    border-right: 1px solid #e5e7eb;
+}
 
-# Check DB existence
+
+
+/* 🔘 Buttons */
+.stButton > button {
+    background: linear-gradient(135deg, #4f8cff, #6ea8fe);
+    color: white;
+    border-radius: 10px;
+    border: none;
+    padding: 10px;
+    font-weight: 600;
+}
+
+/* 📤 Upload fix */
+.stFileUploader > div {
+    background-color: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 10px !important;
+}
+
+/* 💬 Chat */
+[data-testid="stChatMessage"] {
+    background-color: white;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+/* 📌 Sources */
+.source-box {
+    background-color: #ffffff;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 10px;
+}
+
+/* 🧾 Input */
+input {
+    border-radius: 10px !important;
+    border: 1px solid #e5e7eb !important;
+    padding: 10px !important;
+    background-color: white !important;
+    color: black !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+
+# ---------------- HEADER ----------------
+st.markdown("""
+# 🧠 AI Document Intelligence  
+### Analyze your PDFs with AI — fast, smart, powerful
+""")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.title("📂 Documents")
+    st.write("Upload and manage your PDFs")
+
+    st.markdown("### Upload PDFs")
+
+    uploaded_files = st.file_uploader(
+        "",
+        type="pdf",
+        accept_multiple_files=True
+    )
+
+    if uploaded_files:
+        os.makedirs("data", exist_ok=True)
+
+        for old_file in os.listdir("data"):
+            os.remove(f"data/{old_file}")
+
+        for file in uploaded_files:
+            path = f"data/{file.name}"
+            with open(path, "wb") as f:
+                f.write(file.getbuffer())
+
+        st.success("Files uploaded")
+
+    if st.button("Rebuild Knowledge Base", use_container_width=True):
+        import shutil
+
+        if os.path.exists("vectorstore"):
+            shutil.rmtree("vectorstore")
+
+        result = os.system("python ingest.py")
+
+        if result == 0:
+            st.success("Database ready")
+            st.cache_resource.clear()
+        else:
+            st.error("ingest failed")
+
+
 if not os.path.exists("vectorstore"):
     st.warning("Upload PDFs and rebuild database first")
     st.stop()
 
-print("[APP] Loading db and llm...")
+@st.cache_resource
+def load_db():
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return FAISS.load_local("vectorstore", embeddings, allow_dangerous_deserialization=True)
+
+@st.cache_resource
+def load_llm():
+    from langchain_ollama import OllamaLLM
+    return OllamaLLM(model="gemma3:12b")
+
 db = load_db()
 llm = load_llm()
-print("[APP] db and llm ready")
 
-# Chat history
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# Summary
-st.header("Document Summary")
-if st.button("Generate Summary"):
+if "summary" not in st.session_state:
+    st.session_state.summary = None
+
+if "insights" not in st.session_state:
+    st.session_state.insights = None
+
+
+st.markdown("## 📄 Document Summary")
+
+if st.button("Generate Summary", use_container_width=True):
     docs = db.similarity_search("summary", k=5)
     context = "\n".join([doc.page_content for doc in docs])[:1500]
-    
-    prompt = f"What is this document about? Give a detailed summary:\n\n{context[:2000]}"
-    
-    result = llm.invoke(prompt)
-    
-    print(f"[SUMMARY] Result: '{result}'")
-    if result and result.strip():
-        st.write(result)
-    else:
-        st.warning("Empty response. Check terminal.")
 
-# Insights
-if st.button("Extract Insights"):
-    docs = db.similarity_search("key points requirements", k=5)
+    prompt = f"What is this document about?\n\n{context}"
+
+    with st.spinner("Generating summary..."):
+        result = llm.invoke(prompt)
+
+    st.session_state.summary = result    
+
+
+if st.button("Extract Insights", use_container_width=True):
+    docs = db.similarity_search("key points", k=5)
     context = "\n".join([doc.page_content for doc in docs])[:1500]
-    
-    prompt = f"List the main requirements and rules from this text:\n\n{context[:2000]}"
-    
-    result = llm.invoke(prompt)
 
-    print(f"[INSIGHTS] Result: '{result}'")
-    if result and result.strip():
-        st.write(result)
-    else:
-        st.warning("Empty response. Check terminal.")
+    with st.spinner("Extracting insights..."):
+        result = llm.invoke(f"Extract key insights:\n\n{context}")
 
-# Q&A
-st.header("Ask Questions")
-query = st.text_input("Ask something about your documents")
+    st.session_state.insights = result
+
+st.markdown('</div>', unsafe_allow_html=True)
+# Display summary
+if st.session_state.summary is not None:
+    st.markdown("### 🧾 Summary")
+    st.write(st.session_state.summary)
+
+# Display insights
+if st.session_state.insights is not None:
+    st.markdown("### 💡 Insights")
+    st.write(st.session_state.insights)
+
+st.markdown("## 💬 Ask Questions")
+
+query = st.text_input("", placeholder="Ask something about your documents...")
 
 if query:
-    print(f"[QA] Query: '{query}'")
     qa = RetrievalQA.from_chain_type(
         llm=llm,
         retriever=db.as_retriever(),
         return_source_documents=True
     )
-    result = qa.invoke({"query": query})
-    print(f"[QA] Result: '{result['result']}'")
 
-    st.subheader("Answer")
+    with st.spinner("Thinking..."):
+        result = qa.invoke({"query": query})
+
     st.write(result["result"])
     st.session_state.history.append((query, result["result"]))
 
-    st.subheader("Sources")
+    st.markdown("### 📌 Sources")
+
     for doc in result["source_documents"]:
         st.markdown(
-            f"""<div style="background-color:#f5f5f5; padding:10px; border-radius:5px; color:black;">
+            f"""<div class="source-box">
             {doc.page_content[:300]}
             </div>""",
             unsafe_allow_html=True
         )
 
-# History
-st.subheader("Chat History")
+st.markdown('</div>', unsafe_allow_html=True)
+
+# -------- CHAT --------
+st.markdown("## 🧾 Chat History")
+
 for q, r in st.session_state.history:
-    st.write(f"**You:** {q}")
-    st.write(f"**AI:** {r}")
+    with st.chat_message("user"):
+        st.write(q)
+    with st.chat_message("assistant"):
+        st.write(r)
+        
