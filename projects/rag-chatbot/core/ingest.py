@@ -8,15 +8,17 @@ DATA_PATH = "data"
 
 def load_all_pdfs():
     documents = []
+
     if not os.path.exists(DATA_PATH):
-        print("No data folder found")
         return documents
+
     for file in os.listdir(DATA_PATH):
         if file.endswith(".pdf"):
-            path = os.path.join(DATA_PATH, file)
-            loader = PyPDFLoader(path)
+            loader = PyPDFLoader(os.path.join(DATA_PATH, file))
             documents.extend(loader.load())
+
     return documents
+
 
 def split_docs(docs):
     splitter = RecursiveCharacterTextSplitter(
@@ -25,13 +27,23 @@ def split_docs(docs):
     )
     return splitter.split_documents(docs)
 
-if __name__ == "__main__":
+
+def ingest():
     docs = load_all_pdfs()
+
     if not docs:
-        print("No PDFs found in data/")
-        exit()
+        print("No PDFs found")
+        return
+
     chunks = split_docs(docs)
+
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
     db = FAISS.from_documents(chunks, embeddings)
     db.save_local("vectorstore")
-    print("Vector database created from all PDFs")
+
+    print("Vector DB created")
+
+
+if __name__ == "__main__":
+    ingest()
