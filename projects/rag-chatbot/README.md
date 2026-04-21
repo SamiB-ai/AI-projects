@@ -1,6 +1,6 @@
 # 🧠 AI Document Intelligence
 
-A local RAG (Retrieval-Augmented Generation) application I built that lets you upload PDF documents and interact with them through an AI-powered chat interface — entirely on your own machine, no API key required.
+A local RAG (Retrieval-Augmented Generation) application that lets you upload PDF documents and interact with them through an AI-powered chat interface — entirely on your own machine, no API key required.
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-red?logo=streamlit)
@@ -12,40 +12,71 @@ A local RAG (Retrieval-Augmented Generation) application I built that lets you u
 
 ## 🎯 What I Built
 
-I wanted to create a tool that allows anyone to chat with their own documents without sending sensitive data to external APIs. The result is a fully local RAG pipeline with a clean Streamlit interface, powered by Ollama and FAISS.
+I designed a modular and scalable RAG system that allows users to chat with their own documents locally, without sending sensitive data to external APIs.
+
+The project follows a clean architecture inspired by production AI systems, separating core logic, services, utilities, and UI.
 
 **What you can do with it:**
+
 - Upload one or multiple PDFs
-- Get an automatic summary of your documents
-- Extract key insights with one click
-- Ask any question and get a grounded answer with source references
-- Share the app temporarily via ngrok
+- Automatically build a semantic search database
+- Generate document summaries
+- Extract key insights
+- Ask questions with grounded answers and sources
+- Run everything locally (privacy-friendly)
 
 ---
 
 ## 📸 Screenshots
 
 ### 📄 Document Summary
-<img width="1910" alt="Document Summary" src="https://github.com/user-attachments/assets/eebd97ce-3e9b-49cf-a085-6749a8142f42" />
+<img width="1910" src="https://github.com/user-attachments/assets/eebd97ce-3e9b-49cf-a085-6749a8142f42" />
 
 ### 💡 Key Insights
-<img width="1915" alt="Key Insights" src="https://github.com/user-attachments/assets/8e81bbd8-aba1-40cf-98b2-0b237e9f3305" />
+<img width="1915" src="https://github.com/user-attachments/assets/8e81bbd8-aba1-40cf-98b2-0b237e9f3305" />
 
 ### 💬 Ask Questions
-<img width="1899" alt="Ask Questions" src="https://github.com/user-attachments/assets/a3e3f9c2-23ec-471c-91d0-a1044d4c58b9" />
+<img width="1899" src="https://github.com/user-attachments/assets/a3e3f9c2-23ec-471c-91d0-a1044d4c58b9" />
 
 ---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology | Role |
-|-------|-----------|------|
+|---|---|---|
 | UI | Streamlit | Web interface |
 | LLM | Ollama — Gemma3 12B | Answer generation |
-| Embeddings | `all-MiniLM-L6-v2` | Semantic search |
+| Embeddings | all-MiniLM-L6-v2 | Semantic search |
 | Vector Store | FAISS | Similarity search |
-| PDF Parsing | LangChain + PyPDF | Document loading |
-| Tunneling | ngrok | Public URL sharing |
+| Orchestration | LangChain | RAG pipeline |
+| PDF Parsing | PyPDFLoader | Document loading |
+
+---
+
+## 🗂️ Architecture
+
+```
+rag-chatbot/
+├── app/
+│   └── streamlit_app.py     # UI layer (Streamlit)
+│   └── ui.py                # Css layer 
+│
+├── core/                    # Core AI logic
+│   ├── llm.py               # LLM loader (Ollama)
+│   ├── rag.py               # RetrievalQA pipeline
+│   ├── ingest.py            # PDF ingestion pipeline
+│   └── vectorstore.py       # FAISS loading
+│
+├── services/                # Business logic
+│   ├── summarizer.py        # Document summarization
+│   └── insights.py          # Insight extraction
+│
+├── utils/
+│   └── file_handler.py      # File upload management
+│
+├── data/                    # Uploaded PDFs (ignored)
+└── vectorstore/             # FAISS index (ignored)
+```
 
 ---
 
@@ -53,23 +84,26 @@ I wanted to create a tool that allows anyone to chat with their own documents wi
 
 ```
 PDF Upload
-    │
-    ▼
-Split into chunks (500 tokens, 100 overlap)
-    │
-    ▼
-Each chunk converted to embedding vector (MiniLM)
-    │
-    ▼
-Vectors indexed in FAISS
-    │
-    ▼
-User question → embedding → top 5 similar chunks retrieved
-    │
-    ▼
-Chunks + question sent to Gemma3 via Ollama
-    │
-    ▼
+│
+▼
+Documents loaded & split into chunks
+│
+▼
+Chunks embedded using MiniLM
+│
+▼
+Stored in FAISS vector database
+│
+▼
+User query → embedding → similarity search
+│
+▼
+Relevant chunks retrieved
+│
+▼
+Sent to LLM (Gemma3 via Ollama)
+│
+▼
 Answer generated locally ✅
 ```
 
@@ -80,76 +114,66 @@ Answer generated locally ✅
 ### Prerequisites
 
 - Python 3.10+
-- [Ollama](https://ollama.com) installed
-- 32GB RAM recommended (minimum 8GB)
+- Ollama installed
+- 8 GB RAM minimum (16–32 GB recommended)
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/SamiB-ai/AI-projects.git
 cd projects/rag-chatbot
 
-# Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Mac/Linux
+venv\Scripts\activate      # Windows
+# source venv/bin/activate # Mac/Linux
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### Pull a local LLM
+### Pull a Local Model
 
 ```bash
 ollama pull gemma3:12b
 ```
 
-> You can swap this for `mistral` or `llama3` by changing the model name in `app.py`.
+> You can change the model in `core/llm.py`.
 
-### Run
+### Run the App
 
 ```bash
-streamlit run app.py
+streamlit run app/streamlit_app.py
 ```
 
-Open your browser at `http://localhost:8501`.
+Open: [http://localhost:8501](http://localhost:8501)
 
 ---
 
-## 📁 Project Structure
+## 🔁 Rebuilding the Knowledge Base
 
-```
-rag-chatbot/
-├── app.py              # Main Streamlit application
-├── ingest.py           # PDF ingestion & vector store builder
-├── requirements.txt    # Python dependencies
-├── .gitignore
-├── data/               # PDF storage (gitignored)
-└── vectorstore/        # FAISS index (gitignored)
-```
+After uploading PDFs in the UI, click **"Rebuild Knowledge Base"**.
+
+This runs `core/ingest.py`, which:
+
+1. Loads PDFs
+2. Splits them into chunks
+3. Generates embeddings
+4. Stores them in FAISS
 
 ---
 
 ## 🌐 Sharing the App
 
-To expose the app publicly using ngrok:
-
 ```bash
-# In a separate terminal
 ngrok http 8501
 ```
-
-This generates a temporary public URL that anyone can access as long as your machine is running.
 
 ---
 
 ## 💡 What I Learned
 
-Building this project gave me hands-on experience with:
-- Designing a full RAG pipeline from scratch
-- Working with vector embeddings and similarity search
-- Integrating local LLMs via Ollama into a LangChain pipeline
-- Managing LangChain versioning and dependency conflicts
-- Building and deploying a Streamlit app
-
+- Designing a modular RAG architecture
+- Separation of concerns (core vs services vs UI)
+- Vector search and embeddings
+- Running local LLMs with Ollama
+- Building AI apps with Streamlit
+- Managing large document pipelines
