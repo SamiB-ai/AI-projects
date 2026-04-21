@@ -3,7 +3,7 @@
 This repository contains my machine learning and AI projects.
 
 ## Projects
-- RAG Chatbot (in progress)
+- RAG Chatbot (Finished)
 - Churn Prediction Model (in progress)
 
 ## Tech Stack
