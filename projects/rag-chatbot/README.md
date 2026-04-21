@@ -23,6 +23,19 @@ I wanted to create a tool that allows anyone to chat with their own documents wi
 
 ---
 
+## 📸 Screenshots
+
+### 📄 Document Summary
+<img width="1910" alt="Document Summary" src="https://github.com/user-attachments/assets/eebd97ce-3e9b-49cf-a085-6749a8142f42" />
+
+### 💡 Key Insights
+<img width="1915" alt="Key Insights" src="https://github.com/user-attachments/assets/8e81bbd8-aba1-40cf-98b2-0b237e9f3305" />
+
+### 💬 Ask Questions
+<img width="1899" alt="Ask Questions" src="https://github.com/user-attachments/assets/a3e3f9c2-23ec-471c-91d0-a1044d4c58b9" />
+
+---
+
 ## 🛠️ Tech Stack
 
 | Layer | Technology | Role |
@@ -139,5 +152,4 @@ Building this project gave me hands-on experience with:
 - Integrating local LLMs via Ollama into a LangChain pipeline
 - Managing LangChain versioning and dependency conflicts
 - Building and deploying a Streamlit app
-
 
