@@ -75,7 +75,7 @@ Answer generated locally ✅
 ```bash
 # Clone the repository
 git clone https://github.com/SamiB-ai/AI-projects.git
-cd rag-chatbot
+cd projects/rag-chatbot
 
 # Create and activate virtual environment
 python -m venv venv
