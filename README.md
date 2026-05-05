@@ -7,4 +7,4 @@ This repository contains my machine learning and AI projects.
 - Churn Prediction Model (Finished)
 
 ## Tech Stack
-Python, Machine Learning, Deep Learning, LLMs, FastAPI
+Python, Machine Learning, Deep Learning, LLMs, FastAPI, Streamlit
