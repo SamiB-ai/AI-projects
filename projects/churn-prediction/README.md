@@ -31,7 +31,6 @@ This project goes beyond a standard churn model. It is a full ML platform that c
 churn-platform/
 ├── data/
 │   ├── raw/                  # Original Telco dataset
-│   └── processed/            # Enriched dataset with segments
 │
 ├── notebooks/
 │   ├── 01_eda.ipynb          # Exploratory data analysis
@@ -187,6 +186,7 @@ The UI provides a full customer profile form with real-time prediction output:
 - **Customer summary** panel
 
 ---
+<img width="1893" height="888" alt="image" src="https://github.com/user-attachments/assets/9912b1e5-6a16-4a61-94e3-1f379ff21872" />
 
 ## Docker — Full Stack Deployment
 
