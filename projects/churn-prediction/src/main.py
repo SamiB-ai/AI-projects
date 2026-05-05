@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 import pandas as pd
-from schemas import CustomerInput, CustomerOutput
-from business import run_business_pipeline
+from src.schemas import CustomerInput, CustomerOutput
+from src.business import run_business_pipeline
 
 app = FastAPI(
     title="Churn Prediction API",

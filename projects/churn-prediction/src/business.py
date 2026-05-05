@@ -4,14 +4,16 @@ import numpy as np
 import json
 
 # load models
-model = joblib.load("../models/churn_model.pkl")
-kmeans = joblib.load("../models/kmeans_model.pkl")
-scaler = joblib.load("../models/scaler_cluster.pkl")
-features = joblib.load("../models/features.pkl")
+import os
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-with open("../models/segment_names.json", "r") as f:
+model    = joblib.load(os.path.join(BASE, "models", "churn_model.pkl"))
+kmeans   = joblib.load(os.path.join(BASE, "models", "kmeans_model.pkl"))
+scaler   = joblib.load(os.path.join(BASE, "models", "scaler_cluster.pkl"))
+features = joblib.load(os.path.join(BASE, "models", "features.pkl"))
+
+with open(os.path.join(BASE, "models", "segment_names.json"), "r") as f:
     segment_names = json.load(f)
-
 # Features attendues par le scaler_cluster (dans cet ordre exact)
 CLUSTER_FEATURES = [
     "tenure",
