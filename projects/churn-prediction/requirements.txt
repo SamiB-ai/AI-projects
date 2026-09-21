@@ -8,6 +8,6 @@ uvicorn==0.45.0
 pydantic==2.13.3
 joblib==1.5.3
 streamlit==1.56.0
-matplotlib>=3.9.0
-seaborn>=0.13.2
-requests
+matplotlib==3.10.8
+seaborn==0.13.2
+requests==2.32.5
