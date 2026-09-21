@@ -2,12 +2,12 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-import json
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import shap
 import requests
 import os
+import html
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -18,9 +18,8 @@ API_URL = "https://ai-projects-3-qkro.onrender.com"
 
 
 def predict_churn(customer_data):
-    """
-    Send customer data to the FastAPI backend on Render.
-    """
+    """Send customer data to the FastAPI backend on Render."""
+
     response = requests.post(
         f"{API_URL}/predict",
         json=customer_data,
@@ -190,7 +189,6 @@ section[data-testid="stSidebar"] .stSlider label {
 .prob-bar-fill {
     height: 8px;
     border-radius: 4px;
-    transition: width 0.4s ease;
 }
 
 /* Divider */
@@ -235,7 +233,7 @@ hr {
 # ══════════════════════════════════════════════════════════════════════════════
 # LOAD LOCAL ARTIFACTS
 # Used only for SHAP visualization.
-# The actual prediction comes from FastAPI /predict.
+# Actual prediction comes from FastAPI /predict.
 # ══════════════════════════════════════════════════════════════════════════════
 
 @st.cache_resource
@@ -268,7 +266,6 @@ except Exception as e:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PREPROCESSING FOR SHAP
-# This mirrors the preprocessing used by the backend.
 # ══════════════════════════════════════════════════════════════════════════════
 
 def preprocess_for_shap(df_raw):
@@ -312,14 +309,10 @@ def shap_waterfall(model, df_proc, features_list):
     else:
         sv = shap_vals[0]
 
-    vals = sv
-    names = features_list
+    idx = np.argsort(np.abs(sv))[::-1][:10]
 
-    # Top 10 features
-    idx = np.argsort(np.abs(vals))[::-1][:10]
-
-    top_vals = vals[idx]
-    top_names = [names[i] for i in idx]
+    top_vals = sv[idx]
+    top_names = [features_list[i] for i in idx]
 
     fig, ax = plt.subplots(figsize=(7, 4))
 
@@ -327,8 +320,8 @@ def shap_waterfall(model, df_proc, features_list):
     ax.set_facecolor("#13151e")
 
     colors = [
-        "#f87171" if v > 0 else "#4ade80"
-        for v in top_vals
+        "#f87171" if value > 0 else "#4ade80"
+        for value in top_vals
     ]
 
     ax.barh(
@@ -394,31 +387,21 @@ def shap_waterfall(model, df_proc, features_list):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SIDEBAR — CUSTOMER INPUT
+# SIDEBAR
 # ══════════════════════════════════════════════════════════════════════════════
 
 with st.sidebar:
 
-    st.markdown(
-        '<div class="header-title">📡 Churn Platform</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="header-sub">v1.0 · Single prediction</div>',
-        unsafe_allow_html=True
-    )
+    st.html("""
+        <div class="header-title">📡 Churn Platform</div>
+        <div class="header-sub">v1.0 · Single prediction</div>
+    """)
 
     st.markdown("---")
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # ACCOUNT
-    # ──────────────────────────────────────────────────────────────────────────
-
-    st.markdown(
-        '<div class="section-title">Account</div>',
-        unsafe_allow_html=True
-    )
+    st.html("""
+        <div class="section-title">Account</div>
+    """)
 
     tenure = st.slider(
         "Tenure (months)",
@@ -447,24 +430,15 @@ with st.sidebar:
         format_func=lambda x: "Yes" if x else "No"
     )
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # CONTRACT
-    # ──────────────────────────────────────────────────────────────────────────
-
-    st.markdown(
-        '<div class="section-title" style="margin-top:1rem">'
-        'Contract & Billing'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    st.html("""
+        <div class="section-title" style="margin-top:1rem">
+            Contract & Billing
+        </div>
+    """)
 
     contract = st.selectbox(
         "Contract",
-        [
-            "Month-to-month",
-            "One year",
-            "Two year"
-        ]
+        ["Month-to-month", "One year", "Two year"]
     )
 
     payment = st.selectbox(
@@ -482,16 +456,11 @@ with st.sidebar:
         ["Yes", "No"]
     )
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # SERVICES
-    # ──────────────────────────────────────────────────────────────────────────
-
-    st.markdown(
-        '<div class="section-title" style="margin-top:1rem">'
-        'Services'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    st.html("""
+        <div class="section-title" style="margin-top:1rem">
+            Services
+        </div>
+    """)
 
     phone_service = st.selectbox(
         "Phone Service",
@@ -538,16 +507,11 @@ with st.sidebar:
         ["Yes", "No", "No internet service"]
     )
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # DEMOGRAPHICS
-    # ──────────────────────────────────────────────────────────────────────────
-
-    st.markdown(
-        '<div class="section-title" style="margin-top:1rem">'
-        'Demographics'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    st.html("""
+        <div class="section-title" style="margin-top:1rem">
+            Demographics
+        </div>
+    """)
 
     gender = st.selectbox(
         "Gender",
@@ -564,8 +528,6 @@ with st.sidebar:
         ["Yes", "No"]
     )
 
-    st.markdown("")
-
     predict_btn = st.button(
         "⚡  Run Prediction"
     )
@@ -575,19 +537,15 @@ with st.sidebar:
 # MAIN HEADER
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.markdown(
-    '<div class="header-title">'
-    'Churn Intelligence Platform'
-    '</div>',
-    unsafe_allow_html=True
-)
+st.html("""
+    <div class="header-title">
+        Churn Intelligence Platform
+    </div>
 
-st.markdown(
-    '<div class="header-sub">'
-    'ML-powered churn prediction · customer segmentation · retention actions'
-    '</div>',
-    unsafe_allow_html=True
-)
+    <div class="header-sub">
+        ML-powered churn prediction · customer segmentation · retention actions
+    </div>
+""")
 
 st.markdown("---")
 
@@ -598,9 +556,7 @@ st.markdown("---")
 
 with st.expander("🔌 API Backend"):
 
-    st.write(
-        f"Backend: `{API_URL}`"
-    )
+    st.write("FastAPI backend · Render")
 
     try:
 
@@ -610,21 +566,17 @@ with st.expander("🔌 API Backend"):
         )
 
         if health_response.ok:
-
-            st.success(
-                "FastAPI backend is online."
-            )
+            st.success("FastAPI backend is online.")
 
         else:
-
             st.warning(
                 f"API returned HTTP {health_response.status_code}"
             )
 
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
 
         st.error(
-            f"Cannot reach FastAPI backend: {e}"
+            "Cannot reach FastAPI backend."
         )
 
 
@@ -634,57 +586,30 @@ with st.expander("🔌 API Backend"):
 
 if predict_btn:
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Build customer payload
-    # ──────────────────────────────────────────────────────────────────────────
-
     customer = {
 
         "customerID": "DEMO-001",
 
         "gender": gender,
-
         "SeniorCitizen": senior,
-
         "Partner": partner,
-
         "Dependents": dependents,
-
         "tenure": tenure,
-
         "PhoneService": phone_service,
-
         "MultipleLines": multi_lines,
-
         "InternetService": internet,
-
         "OnlineSecurity": online_sec,
-
         "OnlineBackup": online_backup,
-
         "DeviceProtection": device_prot,
-
         "TechSupport": tech_support,
-
         "StreamingTV": streaming_tv,
-
         "StreamingMovies": streaming_movies,
-
         "Contract": contract,
-
         "PaperlessBilling": paperless,
-
         "PaymentMethod": payment,
-
         "MonthlyCharges": monthly_charges,
-
         "TotalCharges": total_charges,
     }
-
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Call FastAPI
-    # ──────────────────────────────────────────────────────────────────────────
 
     with st.spinner("Running prediction..."):
 
@@ -694,9 +619,7 @@ if predict_btn:
 
         except requests.exceptions.HTTPError as e:
 
-            st.error(
-                f"FastAPI returned an error: {e}"
-            )
+            st.error(f"FastAPI returned an error: {e}")
 
             try:
                 st.code(e.response.text)
@@ -705,14 +628,11 @@ if predict_btn:
 
             st.stop()
 
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
 
             st.error(
-                f"Could not connect to FastAPI: {e}"
-            )
-
-            st.info(
-                "Check that the Render API is awake and available."
+                "Could not connect to FastAPI. "
+                "Check that the Render API is awake."
             )
 
             st.stop()
@@ -725,28 +645,15 @@ if predict_btn:
 
             st.stop()
 
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Read API response
-    # ──────────────────────────────────────────────────────────────────────────
-
     try:
 
-        proba = float(
-            prediction["churn_proba"]
-        )
-
+        proba = float(prediction["churn_proba"])
         risk = prediction["risk"]
-
         segment = prediction["SegmentName"]
-
         action = prediction["action"]
+        priority = float(prediction["priority_score"])
 
-        priority = float(
-            prediction["priority_score"]
-        )
-
-    except (KeyError, TypeError, ValueError) as e:
+    except (KeyError, TypeError, ValueError):
 
         st.error(
             "Invalid response received from FastAPI."
@@ -779,8 +686,6 @@ if predict_btn:
         "badge-medium"
     )
 
-    bar_color = risk_color
-
 
     # ══════════════════════════════════════════════════════════════════════════
     # ROW 1 — KPIs
@@ -789,50 +694,33 @@ if predict_btn:
     col1, col2, col3, col4 = st.columns(4)
 
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Churn Probability
-    # ──────────────────────────────────────────────────────────────────────────
-
     with col1:
 
-        st.markdown(
-            f"""
+        st.html(f"""
             <div class="metric-card">
 
                 <div class="label">
                     Churn Probability
                 </div>
 
-                <div class="value"
-                     style="color:{risk_color}">
-
+                <div class="value" style="color:{risk_color}">
                     {proba:.1%}
-
                 </div>
 
                 <div class="prob-bar-wrap">
-
                     <div class="prob-bar-fill"
-                         style="width:{proba*100:.1f}%;
-                                background:{bar_color}">
+                         style="width:{proba * 100:.1f}%;
+                                background:{risk_color}">
                     </div>
-
                 </div>
 
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """)
 
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Risk Level
-    # ──────────────────────────────────────────────────────────────────────────
 
     with col2:
 
-        st.markdown(
-            f"""
+        st.html(f"""
             <div class="metric-card">
 
                 <div class="label">
@@ -844,25 +732,18 @@ if predict_btn:
                             padding-top:0.3rem">
 
                     <span class="badge {badge_cls}">
-                        {risk}
+                        {html.escape(str(risk))}
                     </span>
 
                 </div>
 
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """)
 
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Segment
-    # ──────────────────────────────────────────────────────────────────────────
 
     with col3:
 
-        st.markdown(
-            f"""
+        st.html(f"""
             <div class="metric-card">
 
                 <div class="label">
@@ -874,24 +755,17 @@ if predict_btn:
                             color:#93c5fd;
                             padding-top:0.2rem">
 
-                    {segment}
+                    {html.escape(str(segment))}
 
                 </div>
 
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """)
 
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Priority
-    # ──────────────────────────────────────────────────────────────────────────
 
     with col4:
 
-        st.markdown(
-            f"""
+        st.html(f"""
             <div class="metric-card">
 
                 <div class="label">
@@ -910,9 +784,7 @@ if predict_btn:
                 </div>
 
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """)
 
 
     st.markdown("")
@@ -925,69 +797,50 @@ if predict_btn:
     col_left, col_right = st.columns([1, 1.6])
 
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # LEFT COLUMN
-    # ──────────────────────────────────────────────────────────────────────────
-
     with col_left:
 
-        st.markdown(
-            '<div class="section-title">'
-            'Recommended Action'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            f"""
-            <div class="action-box">
-                → {action}
+        st.html("""
+            <div class="section-title">
+                Recommended Action
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """)
+
+        st.html(f"""
+            <div class="action-box">
+                → {html.escape(str(action))}
+            </div>
+        """)
 
 
-        # Customer summary
-
-        st.markdown(
-            '<div class="section-title" '
-            'style="margin-top:1.5rem">'
-            'Customer Summary'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        st.html("""
+            <div class="section-title" style="margin-top:1.5rem">
+                Customer Summary
+            </div>
+        """)
 
 
         summary_data = {
 
-            "Tenure":
-                f"{tenure} months",
+            "Tenure": f"{tenure} months",
 
-            "Monthly Charges":
-                f"${monthly_charges:.2f}",
+            "Monthly Charges": f"${monthly_charges:.2f}",
 
-            "Total Charges":
-                f"${total_charges:.2f}",
+            "Total Charges": f"${total_charges:.2f}",
 
-            "Contract":
-                contract,
+            "Contract": contract,
 
-            "Internet":
-                internet,
+            "Internet": internet,
 
-            "Tech Support":
-                tech_support,
+            "Tech Support": tech_support,
 
-            "Online Security":
-                online_sec,
+            "Online Security": online_sec,
+
         }
 
 
         for key, value in summary_data.items():
 
-            st.markdown(
-                f"""
+            st.html(f"""
                 <div style="
                     display:flex;
                     justify-content:space-between;
@@ -1000,34 +853,30 @@ if predict_btn:
                         color:#64748b;
                         font-family:monospace;
                     ">
-                        {key}
+                        {html.escape(str(key))}
                     </span>
 
                     <span style="
                         color:#cbd5e1;
                     ">
-                        {value}
+                        {html.escape(str(value))}
                     </span>
 
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+            """)
 
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # RIGHT COLUMN — SHAP
-    # ──────────────────────────────────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHAP
+    # ══════════════════════════════════════════════════════════════════════════
 
     with col_right:
 
-        st.markdown(
-            '<div class="section-title">'
-            'SHAP — Feature Impact'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
+        st.html("""
+            <div class="section-title">
+                SHAP — Feature Impact
+            </div>
+        """)
 
         if shap_available:
 
@@ -1075,8 +924,7 @@ if predict_btn:
 
 else:
 
-    st.markdown(
-        """
+    st.html("""
         <div style="
             text-align:center;
             padding:4rem 2rem;
@@ -1097,7 +945,7 @@ else:
             ">
 
                 Fill in the customer profile on the left
-                <br>
+                <br><br>
 
                 and click
 
@@ -1108,9 +956,7 @@ else:
             </div>
 
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1119,20 +965,15 @@ else:
 
 st.markdown("---")
 
-st.markdown(
-    """
+st.html("""
     <div style="
         text-align:center;
         font-family:monospace;
         font-size:0.7rem;
         color:#1e2230;
     ">
-
         Churn Intelligence Platform ·
         XGBoost + KMeans + SHAP ·
-        FastAPI backend available on /predict
-
+        FastAPI backend
     </div>
-    """,
-    unsafe_allow_html=True
-)
+""")
