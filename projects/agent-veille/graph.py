@@ -45,7 +45,13 @@ def score(state: State) -> State:
         prompt = (
             f"Centres d'intérêt de l'utilisateur : {config.INTERESTS}\n\n"
             f"Titre : {a['title']}\nRésumé : {a['summary']}\n\n"
-            "Note la pertinence de cet article de 0 à 10. "
+            "Note la pertinence de cet article de 0 à 10, en étant très sévère.\n"
+            "- 9-10 : exceptionnel, directement applicable pour construire ou déployer "
+            "des systèmes d'IA en production.\n"
+            "- 7-8 : intéressant et utile en pratique.\n"
+            "- 4-6 : lié au sujet mais théorique, très spécialisé ou peu applicable.\n"
+            "- 0-3 : hors sujet.\n"
+            "La plupart des articles doivent avoir moins de 7. "
             'Réponds uniquement en JSON : {"score": <entier>, "reason": "<courte raison>"}'
         )
         s, reason = _parse_score(llm.ask(prompt, max_tokens=120))
@@ -59,10 +65,11 @@ def summarize(state: State) -> State:
     out = []
     for a in state["selected"]:
         prompt = (
-            "Résume en français, en 2 phrases maximum, l'intérêt de cet article "
-            f"pour un ingénieur IA.\n\nTitre : {a['title']}\nContenu : {a['summary']}"
+            "Résume cet article en français, en une seule phrase de 25 mots maximum, "
+            "en langage simple et sans jargon : dis ce qu'il apporte concrètement.\n\n"
+            f"Titre : {a['title']}\nContenu : {a['summary']}"
         )
-        out.append({**a, "short": llm.ask(prompt, max_tokens=200)})
+        out.append({**a, "short": llm.ask(prompt, max_tokens=100)})
     return {"selected": out}
 
 
