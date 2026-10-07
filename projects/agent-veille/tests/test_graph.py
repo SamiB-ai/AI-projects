@@ -32,15 +32,23 @@ def test_deuxieme_run_ne_renvoie_rien(monkeypatch, tmp_path):
     sent = setup(monkeypatch, tmp_path)
     graph.build().invoke({})
     graph.build().invoke({})
-    assert len(sent) == 1  # rien de nouveau au 2e passage
+    assert len(sent) == 1  
 
 
 def test_rien_de_pertinent_pas_d_envoi(monkeypatch, tmp_path):
     sent = setup(monkeypatch, tmp_path, [ARTICLES[1]])
     graph.build().invoke({})
     assert sent == []
-    assert graph.store.load() == {"2"}  # mais l'article est marqué comme vu
+    assert graph.store.load() == {"2"}  
 
 
 def test_parse_score_json_casse():
     assert graph._parse_score("score : 8 sur 10")[0] == 8
+
+
+def test_balance_melange_les_sources():
+    articles = [{"id": f"a{i}", "source": "arXiv"} for i in range(30)]
+    articles += [{"id": f"r{i}", "source": "blog"} for i in range(5)]
+    out = graph._balance(articles, 10)
+    assert len(out) == 10
+    assert sum(a["source"] == "blog" for a in out) == 5

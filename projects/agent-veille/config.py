@@ -15,9 +15,11 @@ ARXIV_MAX_PER_QUERY = 5
 
 RSS_FEEDS = [
     "https://huggingface.co/blog/feed.xml",
-    "https://aws.amazon.com/blogs/machine-learning/feed/",
+    "https://aws.amazon.com/blogs/machine-learning/feed/",    
+
 ]
 
 MAX_ARTICLES = 25
-MIN_SCORE = 8
+MIN_SCORE = 7
 MAX_DIGEST = 5
+MIN_TEXT_LENGTH = 80

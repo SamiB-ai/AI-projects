@@ -20,6 +20,18 @@ class State(TypedDict, total=False):
     digest: str
 
 
+def _balance(articles: list[dict], limit: int) -> list[dict]:
+    groups: dict[str, list[dict]] = {}
+    for a in articles:
+        groups.setdefault(a["source"], []).append(a)
+    out = []
+    while len(out) < limit and any(groups.values()):
+        for items in groups.values():
+            if items and len(out) < limit:
+                out.append(items.pop(0))
+    return out
+
+
 def collect(state: State) -> State:
     return {"articles": sources.fetch_all()}
 
@@ -27,7 +39,7 @@ def collect(state: State) -> State:
 def dedupe(state: State) -> State:
     seen = store.load()
     new = [a for a in state["articles"] if a["id"] not in seen]
-    return {"new": new[: config.MAX_ARTICLES]}
+    return {"new": sources.ensure_text(_balance(new, config.MAX_ARTICLES))}
 
 
 def _parse_score(text: str) -> tuple[int, str]:
