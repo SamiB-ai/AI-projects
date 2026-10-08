@@ -8,9 +8,9 @@ import config
 import llm
 import notify
 import sources
-from store import LocalSeenStore
+from store import get_store
 
-store = LocalSeenStore()
+store = get_store()
 
 
 class State(TypedDict, total=False):
@@ -66,7 +66,7 @@ def score(state: State) -> State:
             "La plupart des articles doivent avoir moins de 7. "
             'Réponds uniquement en JSON : {"score": <entier>, "reason": "<courte raison>"}'
         )
-        s, reason = _parse_score(llm.ask(prompt, max_tokens=120))
+        s, reason = _parse_score(llm.ask(prompt, max_tokens=500))
         if s >= config.MIN_SCORE:
             selected.append({**a, "score": s, "reason": reason})
     selected.sort(key=lambda a: a["score"], reverse=True)
@@ -81,7 +81,8 @@ def summarize(state: State) -> State:
             "en langage simple et sans jargon : dis ce qu'il apporte concrètement.\n\n"
             f"Titre : {a['title']}\nContenu : {a['summary']}"
         )
-        out.append({**a, "short": llm.ask(prompt, max_tokens=100)})
+        short = llm.ask(prompt, max_tokens=500) or a["summary"][:200]
+        out.append({**a, "short": short})
     return {"selected": out}
 
 
