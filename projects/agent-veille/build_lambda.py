@@ -14,6 +14,7 @@ FICHIERS = [
     "sources.py",
     "store.py",
     "notify.py",
+    "parametres.py",
 ]
 DOSSIER = "build"
 SORTIE = "lambda.zip"
