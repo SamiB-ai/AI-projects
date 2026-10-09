@@ -2,7 +2,7 @@
 
 Agent qui collecte chaque jour des articles (arXiv et flux RSS), garde ceux qui sont pertinents grâce à un LLM, les résume en une phrase et envoie un digest quotidien. Il tourne en serverless sur AWS, sans aucun serveur à gérer.
 
-(![Digest DIscord](images/resultatdiscord.png))
+![Digest DIscord](images/resultatdiscord.png)
 
 ## Fonctionnement
 
